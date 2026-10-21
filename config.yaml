@@ -1,0 +1,58 @@
+# Worker activity tracker: CPU edge detection/tracking + multimodal LLM decision every 2 s.
+
+detector:
+  weights: models/yolo11n.pt
+  device: cpu              # deployment target has no GPU; "cuda" works locally
+  imgsz: 960               # larger than 640 helps small, far-away workers
+  conf: 0.2
+  tracker: trackers/bytetrack.yaml   # null = bypass tracking (detection only, no LLM)
+  fps: 4.0                 # detection/tracking rate (frames per second of video)
+
+llm:
+  backend: ollama          # none (tracking only) | dummy (random) | ollama (local or cloud) | huggingface | gemini (stub)
+  interval_s: 2.0          # one decision per frame every 2 s (0.5 fps)
+  history_s: 2.0           # each worker also gets a crop from this many seconds earlier
+  max_hold_s: 6.0          # a decision counts until the next one for that worker, at most this long
+  max_workers_per_call: 12
+  concurrency: 1           # parallel in-flight calls; local Ollama runs one at a time, cloud APIs can take more
+  timeout_s: 30
+  layout: sheet            # sheet: frame + one contact sheet of all workers (2 images) | per_worker: 1 + N images
+  frame_width: 1024        # full annotated frame is resized to this width before sending
+  crop_size: 192           # height of each worker crop, px
+  sheet_width: 1280        # max width of the contact sheet
+  crop_margin: 0.2         # extra context around the box, fraction of box size
+  jpeg_quality: 80
+  dummy:
+    seed: 0
+    latency_s: [0.5, 2.0]  # simulated API latency (uniform range) to exercise the async path
+  ollama:
+    model: qwen3.5:4b                  # qwen2.5vl:3b answered "packing_sorting" for everyone; 3.5:4b varies sensibly
+    base_url: http://localhost:11434   # local server, no auth. Cloud: https://ollama.com + OLLAMA_API_KEY
+    api_key_env: OLLAMA_API_KEY        # sent as a Bearer token only if the variable is set
+    num_ctx: 12288                     # ~1000 tokens per image in qwen2.5vl; per_worker layout needs more
+    keep_alive: 10m
+    think: false                       # qwen3.5 is a thinking model; reasoning adds seconds. null for non-thinking models
+  huggingface:                         # transformers in this process; weights download to ~/.cache/huggingface
+    model: Qwen/Qwen3-VL-2B-Instruct   # any image-text-to-text model id (or local folder), e.g. Qwen/Qwen2.5-VL-3B-Instruct
+    device: auto                       # auto = cuda if available, else cpu (slow: tens of seconds per call)
+    dtype: bfloat16                    # on GPU; CPU always uses float32
+    quantize: null                     # null | 4bit | 8bit (bitsandbytes). Qwen2.5-VL-3B needs 4bit on an 8 GB GPU
+    max_pixels: 1048576                # per image (1024x1024); fewer pixels = fewer tokens = faster
+    max_new_tokens: 400
+  gemini:
+    model: gemini-flash-latest
+    api_key_env: GEMINI_API_KEY
+
+smoothing:
+  idle_after: 2            # consecutive idle answers before a worker turns Idle (~4 s)
+  work_after: 1            # consecutive working answers before a worker turns Working
+
+tracks:
+  min_age_s: 1.0           # don't query tracks younger than this (filters flicker detections)
+
+output:
+  dir: outputs
+  annotated_video: true
+
+render:
+  trail_len: 20            # tracking-only mode: how many past positions to draw per ID

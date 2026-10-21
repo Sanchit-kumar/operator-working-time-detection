@@ -1,0 +1,8 @@
+# ByteTrack for CCTV at ~4 fps detection rate. Buffer counts processed frames, not video frames.
+tracker_type: bytetrack
+track_high_thresh: 0.3
+track_low_thresh: 0.1
+new_track_thresh: 0.35
+track_buffer: 20           # keep lost tracks ~5 s at 4 fps (occlusion behind machines/racks)
+match_thresh: 0.85         # lenient: people move further between frames at 4 fps
+fuse_score: True

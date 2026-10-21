@@ -1,0 +1,40 @@
+# Input videos (large; not shared)
+data/*
+
+# Run results: annotated videos, CSVs, summaries, merged tracker yamls
+outputs/
+
+# Model weights (Ultralytics downloads yolo11n.pt on first use; HF models live in ~/.cache/huggingface)
+*.pt
+*.pth
+*.onnx
+*.engine
+*.safetensors
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Secrets (OLLAMA_API_KEY, GEMINI_API_KEY, HF_TOKEN)
+.env
+.env.*
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+*:Zone.Identifier
